@@ -1,50 +1,44 @@
 import logging
 import os
-from dotenv import load_dotenv  # Для загрузки переменных окружения
 from aiogram import Bot, Dispatcher, types
+from aiogram.client import Application  # Исправленный импорт
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram import F
+from aiogram.fsm.state import State, StatesGroup
 import asyncio
 
-# Загружаем переменные из .env
-load_dotenv()
-
-API_TOKEN = os.getenv('API_TOKEN')  # Получаем токен из переменной окружения
-ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))  # Получаем ID администратора
-
-if not API_TOKEN:
-    raise ValueError("API_TOKEN не найден в .env файле!")
+API_TOKEN = os.getenv('API_TOKEN')
+ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
 
 logging.basicConfig(level=logging.INFO)
 
-# Создаем объект приложения через builder
-from aiogram import Application
+# Инициализация приложения
+bot = Bot(token=API_TOKEN)
+application = Application.builder().token(API_TOKEN).build()  # Правильный способ инициализации
 
-app = Application.builder().token(API_TOKEN).build()
-
-# Создаем клавиатуру главного меню
-menu_keyboard = types.InlineKeyboardMarkup(row_width=2)
-menu_keyboard.add(
-    types.InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
-    types.InlineKeyboardButton("FAQ", callback_data='faq'),
-    types.InlineKeyboardButton("Поддержка", callback_data='support')
-)
-
-# Клавиатура для ответа на заявки
-application_response_keyboard = types.InlineKeyboardMarkup(row_width=2)
-application_response_keyboard.add(
-    types.InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
-    types.InlineKeyboardButton("❌ Отклонить", callback_data='reject_application')
-)
-
-user_applications = {}
+# Dispatcher создается через application
+dp = application.dispatcher
 
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
 
-# Обработчик команды /start
-@app.message(F.command('start'))
+menu_keyboard = InlineKeyboardMarkup(row_width=2)
+menu_keyboard.add(
+    InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
+    InlineKeyboardButton("FAQ", callback_data='faq'),
+    InlineKeyboardButton("Поддержка", callback_data='support')
+)
+
+application_response_keyboard = InlineKeyboardMarkup(row_width=2)
+application_response_keyboard.add(
+    InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
+    InlineKeyboardButton("❌ Отклонить", callback_data='reject_application')
+)
+
+user_applications = {}
+
+@dp.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
     await message.answer(
@@ -55,8 +49,7 @@ async def send_welcome(message: types.Message):
         reply_markup=menu_keyboard
     )
 
-# Обработчик команды /admin
-@app.message(F.command('admin'))
+@dp.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
@@ -65,8 +58,7 @@ async def admin_panel(message: types.Message):
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
-# Обработчик callback_query
-@app.callback_query(F.data)
+@dp.callback_query(F.data)
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
     if code == 'submit_application':
@@ -95,8 +87,7 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, text)
 
-# Обработчик текстовых сообщений для заявки
-@app.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
+@dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
     phone_pattern = re.compile(r'\+?\d{10,15}')
@@ -114,18 +105,17 @@ ID пользователя: {message.from_user.id}""",
     )
     await state.clear()
 
-# Обработчик на случай, если бот не понимает команду
-@app.message()
+@dp.message()
 async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
-# Основная функция для запуска бота
 async def main():
+    # Запуск бота
     try:
-        # Запускаем бота
-        await app.start_polling()
+        await application.start_polling()  # Запуск через новый способ в aiogram 3.x
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
 
 if __name__ == '__main__':
+    # Запуск через asyncio
     asyncio.run(main())
