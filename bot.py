@@ -1,8 +1,7 @@
 import logging
 import os
 from dotenv import load_dotenv  # Импортируем для загрузки переменных из .env
-from aiogram import Bot, Dispatcher, types
-from aiogram.client import Application
+from aiogram import Bot, Dispatcher, types, Application  # Исправленный импорт
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
