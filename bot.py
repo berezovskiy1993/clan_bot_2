@@ -1,29 +1,32 @@
 import logging
 import re
 import os
-from aiogram import types, F
-from aiogram import Application
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
+from aiogram import F
 import asyncio
-from dotenv import load_dotenv
-
-# Загружаем переменные окружения из .env файла
-load_dotenv()
 
 API_TOKEN = os.getenv('API_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
 
 logging.basicConfig(level=logging.INFO)
 
-# Создаем объект Application
-application = Application.builder().token(API_TOKEN).storage(MemoryStorage()).build()
+# Создаем объект бота
+bot = Bot(token=API_TOKEN)
 
+# Используем MemoryStorage для хранения состояний
+storage = MemoryStorage()
+
+# Создаем диспетчер
+dp = Dispatcher(bot, storage=storage)
+
+# Определяем состояния для формы заявки
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
 
-# Главное меню с кнопками
+# Клавиатура главного меню
 menu_keyboard = InlineKeyboardMarkup(row_width=2)
 menu_keyboard.add(
     InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
@@ -31,7 +34,7 @@ menu_keyboard.add(
     InlineKeyboardButton("Поддержка", callback_data='support')
 )
 
-# Кнопки для администратора
+# Клавиатура для ответа на заявки
 application_response_keyboard = InlineKeyboardMarkup(row_width=2)
 application_response_keyboard.add(
     InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
@@ -40,8 +43,8 @@ application_response_keyboard.add(
 
 user_applications = {}
 
-# Обработка команды /start
-@application.message(F.command('start'))
+# Обработчик команды /start
+@dp.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
     await message.answer(
@@ -52,8 +55,8 @@ async def send_welcome(message: types.Message):
         reply_markup=menu_keyboard
     )
 
-# Обработка команды /admin
-@application.message(F.command('admin'))
+# Обработчик команды /admin
+@dp.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
@@ -62,38 +65,38 @@ async def admin_panel(message: types.Message):
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
-# Обработка callback-запросов
-@application.callback_query(F.data)
+# Обработчик callback_query
+@dp.callback_query(F.data)
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
     if code == 'submit_application':
-        await callback_query.answer()
-        await application.bot.send_message(callback_query.from_user.id, "📝 Пожалуйста, напишите свое имя и номер телефона:")
+        await bot.answer_callback_query(callback_query.id)
+        await bot.send_message(callback_query.from_user.id, "📝 Пожалуйста, напишите свое имя и номер телефона:")
         await ApplicationForm.waiting_for_application.set()
     elif code == 'faq':
         text = """🔍 Часто задаваемые вопросы:
 • Как работает бот?
 • Как оформить заявку?
 • Как связаться с поддержкой?"""
-        await callback_query.answer()
-        await application.bot.send_message(callback_query.from_user.id, text)
+        await bot.answer_callback_query(callback_query.id)
+        await bot.send_message(callback_query.from_user.id, text)
     elif code == 'support':
         text = "😊 Для связи с нашей поддержкой напишите: @SupportUsername"
-        await callback_query.answer()
-        await application.bot.send_message(callback_query.from_user.id, text)
+        await bot.answer_callback_query(callback_query.id)
+        await bot.send_message(callback_query.from_user.id, text)
     elif code == 'accept_application':
-        await callback_query.answer()
-        await application.bot.send_message(callback_query.from_user.id, "✅ Заявка принята!")
+        await bot.answer_callback_query(callback_query.id)
+        await bot.send_message(callback_query.from_user.id, "✅ Заявка принята!")
     elif code == 'reject_application':
-        await callback_query.answer()
-        await application.bot.send_message(callback_query.from_user.id, "❌ Заявка отклонена.")
+        await bot.answer_callback_query(callback_query.id)
+        await bot.send_message(callback_query.from_user.id, "❌ Заявка отклонена.")
     else:
         text = "⚠️ Неизвестная команда."
-        await callback_query.answer()
-        await application.bot.send_message(callback_query.from_user.id, text)
+        await bot.answer_callback_query(callback_query.id)
+        await bot.send_message(callback_query.from_user.id, text)
 
-# Обработка заявки
-@application.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
+# Обработчик текстовых сообщений для заявки
+@dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
     phone_pattern = re.compile(r'\+?\d{10,15}')
@@ -101,8 +104,8 @@ async def process_application(message: types.Message, state: FSMContext):
         await message.reply("⚠️ Пожалуйста, укажите корректный номер телефона!")
         return
     user_applications[message.from_user.id] = user_data
-    await application.bot.send_message(message.chat.id, "✅ Спасибо! Ваша заявка отправлена.")
-    await application.bot.send_message(
+    await bot.send_message(message.chat.id, "✅ Спасибо! Ваша заявка отправлена.")
+    await bot.send_message(
         ADMIN_ID,
         f"""🗓️ Новая заявка от @{message.from_user.username or message.from_user.id}:
 {user_data}
@@ -111,19 +114,18 @@ ID пользователя: {message.from_user.id}""",
     )
     await state.clear()
 
-# Обработка нераспознанных сообщений
-@application.message()
+# Обработчик на случай, если бот не понимает команду
+@dp.message()
 async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
-# Основной цикл
+# Основная функция для запуска бота
 async def main():
     try:
-        # Запуск бота
-        await application.start_polling()
+        # Запускаем бота
+        await dp.start_polling()
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
 
 if __name__ == '__main__':
-    # Запуск через asyncio
     asyncio.run(main())
