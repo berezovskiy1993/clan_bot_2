@@ -18,17 +18,17 @@ ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
 
 logging.basicConfig(level=logging.INFO)
 
+# Создание экземпляра бота
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 
-# Создание Dispatcher с использованием метода, поддерживающего новую модель
-dp = Dispatcher()
-
-dp.setup(bot, storage=storage)  # В новой версии aiogram метод setup используется для привязки бота
+# Создание экземпляра Dispatcher
+dp = Dispatcher(bot, storage=storage)
 
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
 
+# Главное меню с кнопками
 menu_keyboard = InlineKeyboardMarkup(row_width=2)
 menu_keyboard.add(
     InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
@@ -36,6 +36,7 @@ menu_keyboard.add(
     InlineKeyboardButton("Поддержка", callback_data='support')
 )
 
+# Кнопки для администратора
 application_response_keyboard = InlineKeyboardMarkup(row_width=2)
 application_response_keyboard.add(
     InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
@@ -44,6 +45,7 @@ application_response_keyboard.add(
 
 user_applications = {}
 
+# Обработка команды /start
 @dp.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
@@ -55,6 +57,7 @@ async def send_welcome(message: types.Message):
         reply_markup=menu_keyboard
     )
 
+# Обработка команды /admin
 @dp.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
@@ -64,6 +67,7 @@ async def admin_panel(message: types.Message):
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
+# Обработка callback-запросов
 @dp.callback_query(F.data)
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
@@ -93,6 +97,7 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, text)
 
+# Обработка заявки
 @dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
@@ -111,10 +116,12 @@ ID пользователя: {message.from_user.id}""",
     )
     await state.clear()
 
+# Обработка нераспознанных сообщений
 @dp.message()
 async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
+# Основной цикл
 async def main():
     # Запуск бота
     try:
