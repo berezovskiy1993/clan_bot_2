@@ -1,21 +1,19 @@
 import logging
-import os
-import re
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.state import State, StatesGroup
 from aiogram import F
+from aiogram.fsm.state import State, StatesGroup
 import asyncio
 
-API_TOKEN = os.getenv('API_TOKEN')
-ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
+# Прямое добавление API токена и ID администратора
+API_TOKEN = "7912601677:AAE_saIpU_55S2dgEdnEnnXov0pw33BPVu0"
+ADMIN_ID = 894031843
 
 logging.basicConfig(level=logging.INFO)
 
-# Инициализация бота и приложения
+# Инициализация бота
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot, storage=MemoryStorage())
+dp = Dispatcher(bot)
 
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
@@ -56,7 +54,7 @@ async def admin_panel(message: types.Message):
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
 @dp.callback_query(F.data)
-async def process_callback(callback_query: types.CallbackQuery):
+async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
     if code == 'submit_application':
         await bot.answer_callback_query(callback_query.id)
