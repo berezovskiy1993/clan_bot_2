@@ -4,8 +4,9 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram import F
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage  # Новый импорт для памяти
+from aiogram.fsm.state import State, StatesGroup  # Новый импорт для состояний
+from aiogram.fsm.context import FSMContext  # Новый импорт для контекста FSM
 import asyncio
 
 API_TOKEN = os.getenv('API_TOKEN')
@@ -14,7 +15,7 @@ ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
-storage = MemoryStorage()
+storage = MemoryStorage()  # Используем новое хранилище
 dp = Dispatcher(bot, storage=storage)
 
 class ApplicationForm(StatesGroup):
@@ -35,7 +36,7 @@ application_response_keyboard.add(
 
 user_applications = {}
 
-@dp.message(F.command('start'))
+@dp.message(F.command('start'))  # Используем новый синтаксис для команд
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
     await message.answer(
@@ -46,7 +47,7 @@ async def send_welcome(message: types.Message):
         reply_markup=menu_keyboard
     )
 
-@dp.message(F.command('admin'))
+@dp.message(F.command('admin'))  # Новый синтаксис для команд
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
