@@ -1,19 +1,14 @@
 import logging
 import os
-import re
 from aiogram import Bot, Dispatcher, types
-from aiogram import F
-from aiogram import Application
+from aiogram import F, Application
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from dotenv import load_dotenv
 import asyncio
 
-# Загружаем переменные окружения из .env
-load_dotenv()
-
+# Загрузка переменных окружения
 API_TOKEN = os.getenv('API_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
 
@@ -21,23 +16,21 @@ logging.basicConfig(level=logging.INFO)
 
 # Инициализация приложения
 bot = Bot(token=API_TOKEN)
-application = Application.builder().token(API_TOKEN).build()  # Правильный способ инициализации
+application = Application.builder().token(API_TOKEN).build()
 
-# Dispatcher создается через application
 dp = application.dispatcher
 
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
 
-menu_keyboard = InlineKeyboardMarkup(row_width=2)
-menu_keyboard.add(
+# Клавиатуры
+menu_keyboard = InlineKeyboardMarkup(row_width=2).add(
     InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
     InlineKeyboardButton("FAQ", callback_data='faq'),
     InlineKeyboardButton("Поддержка", callback_data='support')
 )
 
-application_response_keyboard = InlineKeyboardMarkup(row_width=2)
-application_response_keyboard.add(
+application_response_keyboard = InlineKeyboardMarkup(row_width=2).add(
     InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
     InlineKeyboardButton("❌ Отклонить", callback_data='reject_application')
 )
@@ -47,20 +40,13 @@ user_applications = {}
 @dp.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
-    await message.answer(
-        """👋 Добро пожаловать! 🌟
-        
-Я ваш личный помощник.
-Выберите, что вам нужно:""",
-        reply_markup=menu_keyboard
-    )
+    await message.answer("👋 Добро пожаловать! 🌟\nЯ ваш личный помощник.\nВыберите, что вам нужно:", reply_markup=menu_keyboard)
 
 @dp.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
-        await message.answer(f"""📊 Панель администратора:
-Всего заявок: {total}""")
+        await message.answer(f"📊 Панель администратора:\nВсего заявок: {total}")
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
@@ -88,16 +74,11 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
     elif code == 'reject_application':
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, "❌ Заявка отклонена.")
-    else:
-        text = "⚠️ Неизвестная команда."
-        await bot.answer_callback_query(callback_query.id)
-        await bot.send_message(callback_query.from_user.id, text)
 
 @dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
-    phone_pattern = re.compile(r'\+?\d{10,15}')
-    if not phone_pattern.search(user_data):
+    if not re.match(r'\+?\d{10,15}', user_data):
         await message.reply("⚠️ Пожалуйста, укажите корректный номер телефона!")
         return
     user_applications[message.from_user.id] = user_data
@@ -116,12 +97,10 @@ async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
 async def main():
-    # Запуск бота
     try:
-        await application.start_polling()  # Запуск через новый способ в aiogram 3.x
+        await application.start_polling()
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
 
 if __name__ == '__main__':
-    # Запуск через asyncio
     asyncio.run(main())
