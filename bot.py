@@ -1,4 +1,3 @@
-
 import logging
 import re
 import os
@@ -42,10 +41,10 @@ user_applications = {}
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
     await message.answer(
-        "👋 Добро пожаловать! 🌟
-
-Я ваш личный помощник. 
-Выберите, что вам нужно:",
+        """👋 Добро пожаловать! 🌟
+        
+Я ваш личный помощник.
+Выберите, что вам нужно:""",
         reply_markup=menu_keyboard
     )
 
@@ -53,8 +52,8 @@ async def send_welcome(message: types.Message):
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
-        await message.answer(f"📊 Панель администратора:
-Всего заявок: {total}")
+        await message.answer(f"""📊 Панель администратора:
+Всего заявок: {total}""")
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
@@ -66,10 +65,10 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.send_message(callback_query.from_user.id, "📝 Пожалуйста, напишите свое имя и номер телефона:")
         await ApplicationForm.waiting_for_application.set()
     elif code == 'faq':
-        text = "🔍 Часто задаваемые вопросы:
+        text = """🔍 Часто задаваемые вопросы:
 • Как работает бот?
 • Как оформить заявку?
-• Как связаться с поддержкой?"
+• Как связаться с поддержкой?"""
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, text)
     elif code == 'support':
@@ -98,9 +97,9 @@ async def process_application(message: types.Message, state: FSMContext):
     await bot.send_message(message.chat.id, "✅ Спасибо! Ваша заявка отправлена.")
     await bot.send_message(
         ADMIN_ID,
-        f"🗓️ Новая заявка от @{message.from_user.username or message.from_user.id}:
+        f"""🗓️ Новая заявка от @{message.from_user.username or message.from_user.id}:
 {user_data}
-ID пользователя: {message.from_user.id}",
+ID пользователя: {message.from_user.id}""",
         reply_markup=application_response_keyboard
     )
     await state.clear()
