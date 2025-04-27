@@ -3,6 +3,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram import F
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 import asyncio
 
 # Прямое добавление API токена и ID администратора
@@ -11,9 +12,9 @@ ADMIN_ID = 894031843
 
 logging.basicConfig(level=logging.INFO)
 
-# Инициализация бота
+# Инициализация бота и приложения
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+application = Dispatcher(bot)
 
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
@@ -33,7 +34,7 @@ application_response_keyboard.add(
 
 user_applications = {}
 
-@dp.message(F.command('start'))
+@application.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
     await message.answer(
@@ -44,7 +45,7 @@ async def send_welcome(message: types.Message):
         reply_markup=menu_keyboard
     )
 
-@dp.message(F.command('admin'))
+@application.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
@@ -53,7 +54,7 @@ async def admin_panel(message: types.Message):
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
-@dp.callback_query(F.data)
+@application.callback_query(F.data)
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
     if code == 'submit_application':
@@ -82,7 +83,7 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, text)
 
-@dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
+@application.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
     phone_pattern = re.compile(r'\+?\d{10,15}')
@@ -100,14 +101,14 @@ ID пользователя: {message.from_user.id}""",
     )
     await state.clear()
 
-@dp.message()
+@application.message()
 async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
 async def main():
     # Запуск бота
     try:
-        await dp.start_polling()  # Запуск через новый способ в aiogram 3.x
+        await application.start_polling()  # Запуск через новый способ в aiogram 3.x
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
 
