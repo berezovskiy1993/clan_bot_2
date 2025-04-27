@@ -1,12 +1,15 @@
 
 import logging
 import re
-from aiogram import Bot, Dispatcher, types, executor
+import os
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.dispatcher import FSMContext
+from aiogram.filters import Command
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher.filters.state import State, StatesGroup
-import os
+from aiogram.fsm.state import State, StatesGroup
+from aiogram import F
+import asyncio
 
 API_TOKEN = os.getenv('API_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
@@ -35,23 +38,27 @@ application_response_keyboard.add(
 
 user_applications = {}
 
-@dp.message_handler(commands=['start'])
+@dp.message(Command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
     await message.answer(
-        "👋 Добро пожаловать! 🌟\n\nЯ ваш личный помощник. \nВыберите, что вам нужно:",
+        "👋 Добро пожаловать! 🌟
+
+Я ваш личный помощник. 
+Выберите, что вам нужно:",
         reply_markup=menu_keyboard
     )
 
-@dp.message_handler(commands=['admin'])
+@dp.message(Command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
-        await message.answer(f"📊 Панель администратора:\nВсего заявок: {total}")
+        await message.answer(f"📊 Панель администратора:
+Всего заявок: {total}")
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
-@dp.callback_query_handler(lambda c: c.data)
+@dp.callback_query(F.data)
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
     if code == 'submit_application':
@@ -59,7 +66,10 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.send_message(callback_query.from_user.id, "📝 Пожалуйста, напишите свое имя и номер телефона:")
         await ApplicationForm.waiting_for_application.set()
     elif code == 'faq':
-        text = "🔍 Часто задаваемые вопросы:\n• Как работает бот?\n• Как оформить заявку?\n• Как связаться с поддержкой?"
+        text = "🔍 Часто задаваемые вопросы:
+• Как работает бот?
+• Как оформить заявку?
+• Как связаться с поддержкой?"
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, text)
     elif code == 'support':
@@ -77,7 +87,7 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, text)
 
-@dp.message_handler(state=ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
+@dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
     phone_pattern = re.compile(r'\+?\d{10,15}')
@@ -88,14 +98,24 @@ async def process_application(message: types.Message, state: FSMContext):
     await bot.send_message(message.chat.id, "✅ Спасибо! Ваша заявка отправлена.")
     await bot.send_message(
         ADMIN_ID,
-        f"🗓️ Новая заявка от @{message.from_user.username or message.from_user.id}:\n{user_data}\nID пользователя: {message.from_user.id}",
+        f"🗓️ Новая заявка от @{message.from_user.username or message.from_user.id}:
+{user_data}
+ID пользователя: {message.from_user.id}",
         reply_markup=application_response_keyboard
     )
-    await state.finish()
+    await state.clear()
 
-@dp.message_handler()
+@dp.message()
 async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
+async def main():
+    # Запуск бота
+    try:
+        await dp.start_polling()
+    except Exception as e:
+        logging.error(f"Ошибка при запуске бота: {e}")
+
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    # Запуск через asyncio
+    asyncio.run(main())
