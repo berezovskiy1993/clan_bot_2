@@ -3,11 +3,9 @@ import re
 import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.dispatcher import FSMContext
-from aiogram.filters import Command
+from aiogram import F
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
-from aiogram import F
 import asyncio
 
 API_TOKEN = os.getenv('API_TOKEN')
@@ -37,7 +35,7 @@ application_response_keyboard.add(
 
 user_applications = {}
 
-@dp.message(Command('start'))
+@dp.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
     await message.answer(
@@ -48,7 +46,7 @@ async def send_welcome(message: types.Message):
         reply_markup=menu_keyboard
     )
 
-@dp.message(Command('admin'))
+@dp.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
         total = len(user_applications)
