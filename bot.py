@@ -1,8 +1,7 @@
 import logging
 import os
-from dotenv import load_dotenv  # Импортируем для загрузки переменных из .env
-from aiogram import Bot, Dispatcher, types, Application  # Исправленный импорт
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from dotenv import load_dotenv  # Для загрузки переменных окружения
+from aiogram import Bot, Dispatcher, types
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
 from aiogram import F
@@ -19,25 +18,24 @@ if not API_TOKEN:
 
 logging.basicConfig(level=logging.INFO)
 
-# Создаем объект приложения
+# Создаем объект приложения через builder
+from aiogram import Application
+
 app = Application.builder().token(API_TOKEN).build()
 
-# Используем MemoryStorage для хранения состояний
-storage = MemoryStorage()
-
 # Создаем клавиатуру главного меню
-menu_keyboard = InlineKeyboardMarkup(row_width=2)
+menu_keyboard = types.InlineKeyboardMarkup(row_width=2)
 menu_keyboard.add(
-    InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
-    InlineKeyboardButton("FAQ", callback_data='faq'),
-    InlineKeyboardButton("Поддержка", callback_data='support')
+    types.InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
+    types.InlineKeyboardButton("FAQ", callback_data='faq'),
+    types.InlineKeyboardButton("Поддержка", callback_data='support')
 )
 
 # Клавиатура для ответа на заявки
-application_response_keyboard = InlineKeyboardMarkup(row_width=2)
+application_response_keyboard = types.InlineKeyboardMarkup(row_width=2)
 application_response_keyboard.add(
-    InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
-    InlineKeyboardButton("❌ Отклонить", callback_data='reject_application')
+    types.InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
+    types.InlineKeyboardButton("❌ Отклонить", callback_data='reject_application')
 )
 
 user_applications = {}
