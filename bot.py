@@ -1,12 +1,18 @@
 import logging
 import os
+import re
 from aiogram import Bot, Dispatcher, types
-from aiogram.client import Application  # Исправленный импорт
+from aiogram import F
+from aiogram import Application
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram import F
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+from dotenv import load_dotenv
 import asyncio
+
+# Загружаем переменные окружения из .env
+load_dotenv()
 
 API_TOKEN = os.getenv('API_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
