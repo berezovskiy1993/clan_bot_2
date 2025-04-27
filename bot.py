@@ -7,6 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 import asyncio
+import re
 
 # Загрузка переменных окружения
 API_TOKEN = os.getenv('API_TOKEN')
@@ -18,6 +19,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 application = Application.builder().token(API_TOKEN).build()
 
+# Dispatcher создается через Application
 dp = application.dispatcher
 
 class ApplicationForm(StatesGroup):
@@ -37,11 +39,16 @@ application_response_keyboard = InlineKeyboardMarkup(row_width=2).add(
 
 user_applications = {}
 
+# Команда /start
 @dp.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
-    await message.answer("👋 Добро пожаловать! 🌟\nЯ ваш личный помощник.\nВыберите, что вам нужно:", reply_markup=menu_keyboard)
+    await message.answer(
+        "👋 Добро пожаловать! 🌟\nЯ ваш личный помощник.\nВыберите, что вам нужно:", 
+        reply_markup=menu_keyboard
+    )
 
+# Команда /admin
 @dp.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
@@ -50,6 +57,7 @@ async def admin_panel(message: types.Message):
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
+# Обработка нажатий на кнопки
 @dp.callback_query(F.data)
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
@@ -75,6 +83,7 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, "❌ Заявка отклонена.")
 
+# Обработка заявок
 @dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
@@ -92,15 +101,17 @@ ID пользователя: {message.from_user.id}""",
     )
     await state.clear()
 
+# Обработка ошибок
 @dp.message()
 async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
+# Основная функция для запуска бота
 async def main():
     try:
-        await application.start_polling()
+        await application.start_polling()  # Запуск бота через polling
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    asyncio.run(main())  # Запуск бота через asyncio
