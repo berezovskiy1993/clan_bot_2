@@ -6,33 +6,29 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram import F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
-from dotenv import load_dotenv
 import asyncio
 
-# Загружаем переменные из .env файла
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env файла
 load_dotenv()
 
-# Получаем токен из переменной окружения
 API_TOKEN = os.getenv('API_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
 
-# Проверка на отсутствие токена
-if not API_TOKEN:
-    raise ValueError("API_TOKEN is not set in environment variables")
-
-# Логирование
 logging.basicConfig(level=logging.INFO)
 
-# Создание бота
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
 
-# Состояние заявки
+# Создание Dispatcher с использованием метода, поддерживающего новую модель
+dp = Dispatcher()
+
+dp.setup(bot, storage=storage)  # В новой версии aiogram метод setup используется для привязки бота
+
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
 
-# Клавиатура меню
 menu_keyboard = InlineKeyboardMarkup(row_width=2)
 menu_keyboard.add(
     InlineKeyboardButton("Подать заявку", callback_data='submit_application'),
@@ -40,17 +36,14 @@ menu_keyboard.add(
     InlineKeyboardButton("Поддержка", callback_data='support')
 )
 
-# Клавиатура для отклонения и принятия заявки
 application_response_keyboard = InlineKeyboardMarkup(row_width=2)
 application_response_keyboard.add(
     InlineKeyboardButton("✅ Принять", callback_data='accept_application'),
     InlineKeyboardButton("❌ Отклонить", callback_data='reject_application')
 )
 
-# Словарь для хранения заявок пользователей
 user_applications = {}
 
-# Команда /start
 @dp.message(F.command('start'))
 async def send_welcome(message: types.Message):
     await message.answer_sticker('CAACAgIAAxkBAAEEZPZlZPZxvLrk9l8h2jEXAMPLE')
@@ -62,7 +55,6 @@ async def send_welcome(message: types.Message):
         reply_markup=menu_keyboard
     )
 
-# Команда /admin
 @dp.message(F.command('admin'))
 async def admin_panel(message: types.Message):
     if message.from_user.id == ADMIN_ID:
@@ -72,7 +64,6 @@ async def admin_panel(message: types.Message):
     else:
         await message.answer("⚠️ У вас нет доступа к этой команде.")
 
-# Обработка нажатий на кнопки
 @dp.callback_query(F.data)
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
@@ -102,7 +93,6 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await bot.answer_callback_query(callback_query.id)
         await bot.send_message(callback_query.from_user.id, text)
 
-# Обработка текстовых сообщений при ожидании заявки
 @dp.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
 async def process_application(message: types.Message, state: FSMContext):
     user_data = message.text
@@ -121,18 +111,17 @@ ID пользователя: {message.from_user.id}""",
     )
     await state.clear()
 
-# Обработка неизвестных команд
 @dp.message()
 async def fallback(message: types.Message):
     await message.reply("❓ Я вас не понял. Пожалуйста, используйте команды или нажмите /start для начала.")
 
-# Основная функция для запуска бота
 async def main():
+    # Запуск бота
     try:
         await dp.start_polling()
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
 
-# Запуск через asyncio
 if __name__ == '__main__':
+    # Запуск через asyncio
     asyncio.run(main())
