@@ -1,14 +1,12 @@
 import logging
 import re
 import os
-from aiogram import Bot, Dispatcher, types
+from aiogram import types, F
+from aiogram import Application
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram import F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
 import asyncio
-from aiogram.client import Application
-
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения из .env файла
@@ -19,12 +17,8 @@ ADMIN_ID = int(os.getenv('ADMIN_ID', '894031843'))
 
 logging.basicConfig(level=logging.INFO)
 
-# Создание экземпляра бота
-bot = Bot(token=API_TOKEN)
-storage = MemoryStorage()
-
-# Использование Application для создания и настройки Dispatcher
-application = Application.builder().token(API_TOKEN).storage(storage).build()
+# Создаем объект Application
+application = Application.builder().token(API_TOKEN).storage(MemoryStorage()).build()
 
 class ApplicationForm(StatesGroup):
     waiting_for_application = State()
@@ -73,30 +67,30 @@ async def admin_panel(message: types.Message):
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     code = callback_query.data
     if code == 'submit_application':
-        await bot.answer_callback_query(callback_query.id)
-        await bot.send_message(callback_query.from_user.id, "📝 Пожалуйста, напишите свое имя и номер телефона:")
+        await callback_query.answer()
+        await application.bot.send_message(callback_query.from_user.id, "📝 Пожалуйста, напишите свое имя и номер телефона:")
         await ApplicationForm.waiting_for_application.set()
     elif code == 'faq':
         text = """🔍 Часто задаваемые вопросы:
 • Как работает бот?
 • Как оформить заявку?
 • Как связаться с поддержкой?"""
-        await bot.answer_callback_query(callback_query.id)
-        await bot.send_message(callback_query.from_user.id, text)
+        await callback_query.answer()
+        await application.bot.send_message(callback_query.from_user.id, text)
     elif code == 'support':
         text = "😊 Для связи с нашей поддержкой напишите: @SupportUsername"
-        await bot.answer_callback_query(callback_query.id)
-        await bot.send_message(callback_query.from_user.id, text)
+        await callback_query.answer()
+        await application.bot.send_message(callback_query.from_user.id, text)
     elif code == 'accept_application':
-        await bot.answer_callback_query(callback_query.id)
-        await bot.send_message(callback_query.from_user.id, "✅ Заявка принята!")
+        await callback_query.answer()
+        await application.bot.send_message(callback_query.from_user.id, "✅ Заявка принята!")
     elif code == 'reject_application':
-        await bot.answer_callback_query(callback_query.id)
-        await bot.send_message(callback_query.from_user.id, "❌ Заявка отклонена.")
+        await callback_query.answer()
+        await application.bot.send_message(callback_query.from_user.id, "❌ Заявка отклонена.")
     else:
         text = "⚠️ Неизвестная команда."
-        await bot.answer_callback_query(callback_query.id)
-        await bot.send_message(callback_query.from_user.id, text)
+        await callback_query.answer()
+        await application.bot.send_message(callback_query.from_user.id, text)
 
 # Обработка заявки
 @application.message(ApplicationForm.waiting_for_application, content_types=types.ContentTypes.TEXT)
@@ -107,8 +101,8 @@ async def process_application(message: types.Message, state: FSMContext):
         await message.reply("⚠️ Пожалуйста, укажите корректный номер телефона!")
         return
     user_applications[message.from_user.id] = user_data
-    await bot.send_message(message.chat.id, "✅ Спасибо! Ваша заявка отправлена.")
-    await bot.send_message(
+    await application.bot.send_message(message.chat.id, "✅ Спасибо! Ваша заявка отправлена.")
+    await application.bot.send_message(
         ADMIN_ID,
         f"""🗓️ Новая заявка от @{message.from_user.username or message.from_user.id}:
 {user_data}
@@ -124,8 +118,8 @@ async def fallback(message: types.Message):
 
 # Основной цикл
 async def main():
-    # Запуск бота
     try:
+        # Запуск бота
         await application.start_polling()
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
